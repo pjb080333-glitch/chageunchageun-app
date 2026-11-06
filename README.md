@@ -9,7 +9,7 @@
 | 필요한 설정 | 캘린더 권한 허용, (선택) Virtual Console로 차량 상태 바꾸기 — [필요한 설정](#필요한-설정) |
 | APK 위치 | `apk/차근차근_release.apk`(연동), `apk/차근차근_demo_release.apk`(데모) — [GitHub Release 최신판](../../releases/latest)에서 내려받기 |
 | 사용 SDK 연동 상태 | [표](#사용-sdk와-실제-연동-상태) · [실차에서 동작 / 데모에서만 시연](#실차연동-버전에서-동작--데모-모드에서만-시연) · [알려진 한계](#알려진-한계) |
-| 시연 영상 | [링크 기재] |
+| 시연 영상 | https://youtu.be/JI1Ezh6ZFBk |
 
 현대자동차그룹 차량용 앱 개발 공모전(Pleos Playground) 출품작입니다.
 
