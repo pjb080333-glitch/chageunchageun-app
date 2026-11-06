@@ -1,0 +1,20 @@
+.gradle/
+build/
+/app/build/
+/local.properties
+local.properties
+.idea/
+.kotlin/
+*.iml
+.DS_Store
+*.keystore
+*.jks
+keystore.properties
+/demo/clips/**/*.mp4
+/screenshots/
+/apk/**/*.apk
+/demo/*.mp4
+tools/.emu_last_stop
+# 시연영상 (11-06 편집본, 저장소에 올리지 않음)
+/demo/차근차근_시연영상_자막.mp4
+/demo/차근차근_시연영상_자막없음.mp4

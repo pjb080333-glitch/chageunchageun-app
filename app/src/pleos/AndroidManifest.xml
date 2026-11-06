@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!--
+      Pleos Vehicle SDK 권한. 출처: 공식 샘플 pleos-sample-vehicle-app AndroidManifest.xml
+      ("Vehicle Service protectionLevel=normal") + 개발자 문서 Vehicle/vehicle-permission.
+      앱이 실제로 쓰는 도메인만 선언한다.
+    -->
+    <uses-permission android:name="pleos.car.permission.CAR_DOORS" />       <!-- Door -->
+    <uses-permission android:name="pleos.car.permission.CAR_WINDOWS" />     <!-- Window -->
+    <uses-permission android:name="pleos.car.permission.CAR_DRIVE" />       <!-- Odometer, Brake -->
+    <uses-permission android:name="pleos.car.permission.CAR_MILEAGE" />     <!-- 샘플 선언(주행거리) -->
+    <uses-permission android:name="pleos.car.permission.CAR_ENERGY" />      <!-- Fuel, EvBattery -->
+    <uses-permission android:name="pleos.car.permission.CAR_INFO" />        <!-- CarInfo -->
+    <uses-permission android:name="pleos.car.permission.CAR_LIGHTS" />      <!-- Light, TurnSignal -->
+    <uses-permission android:name="pleos.car.permission.CAR_SAFETY" />      <!-- Safety, Tire -->
+    <uses-permission android:name="pleos.car.permission.CAR_TIRES" />       <!-- 샘플 선언(Tire) -->
+    <uses-permission android:name="pleos.car.permission.CAR_CLIMATE" />     <!-- HVAC -->
+    <uses-permission android:name="pleos.car.permission.CAR_SEATS" />       <!-- Seat -->
+    <uses-permission android:name="pleos.car.permission.CAR_MIRRORS" />     <!-- SideMirror -->
+    <uses-permission android:name="pleos.car.permission.READ_CAR_STEERING" /> <!-- SteeringWheel -->
+
+    <!-- 제어(set): 열선·공조·등화. 운전자 확인 후에만 호출 -->
+    <uses-permission android:name="pleos.car.permission.CONTROL_CAR_CLIMATE" />
+    <uses-permission android:name="pleos.car.permission.CONTROL_CAR_SEATS" />
+    <uses-permission android:name="pleos.car.permission.CONTROL_CAR_MIRRORS" />
+    <uses-permission android:name="pleos.car.permission.CONTROL_CAR_LIGHTS" />
+
+    <!-- NaviHelper. 출처: 개발자 문서 NaviHelper/declaring-permissions, 공식 샘플 pleos-sample-navi-app -->
+    <uses-permission android:name="pleos.car.permission.NAVI_ROUTE" />
+    <uses-permission android:name="pleos.car.permission.NAVI_ROUTE_SEARCH" />
+
+    <!-- 날씨(Open-Meteo)·장소 검색(OpenStreetMap). 키 없는 공개 API -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- AAOS 표준: IGNITION_STATE, PARKING_BRAKE_ON 읽기 (Pleos SDK 에 없는 시동·주차 브레이크) -->
+    <uses-permission android:name="android.car.permission.CAR_POWERTRAIN" />
+
+    <!-- 주유소·정비소 검색 실패 시 표준 지도 검색 인텐트(geo:)를 받는 앱이 있는지 확인 (Android 11+ 패키지 가시성) -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="geo" />
+        </intent>
+    </queries>
+
+    <application>
+        <!--
+          주행 중에도 화면을 띄우기 위한 AAOS 표준 선언(distractionOptimized). 주행 중에는 앱이 스스로
+          음성 안내 + 큰 버튼만 남기고 점검표·등화 점검·이력을 잠근다(CarUxRestrictions 기준).
+        -->
+        <activity android:name="com.chageunchageun.app.MainActivity">
+            <meta-data android:name="distractionOptimized" android:value="true" />
+        </activity>
+        <!-- AAOS Car API (CarPropertyManager, CarUxRestrictionsManager). 자동차 기기가 아니면 없어도 실행된다. -->
+        <uses-library android:name="android.car" android:required="false" />
+    </application>
+</manifest>

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 데모(mock) 앱 이름: 실연동 앱과 함께 설치해도 구분되게 -->
+    <string name="app_name">차근차근 데모</string>
+</resources>

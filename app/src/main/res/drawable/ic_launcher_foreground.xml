@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 직접 그린 아이콘: 계단 두 칸(차근차근) + 둥근 체크 표시. 상표·차량 로고 없음. 108dp 캔버스, 안전 영역(가운데 66dp) 안에 그림 -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- 계단 두 칸 -->
+    <path
+        android:fillColor="#8FB8F0"
+        android:pathData="M27,79 L27,67 Q27,65 29,65 L41,65 L41,55 Q41,53 43,53 L55,53 Q57,53 57,55 L57,79 Z" />
+    <!-- 둥근 체크 -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M68,30 A14,14 0 1,1 67.99,30 Z" />
+    <path
+        android:strokeColor="#1E3557"
+        android:strokeWidth="4"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:fillColor="#00000000"
+        android:pathData="M61,44 L66,49 L75,38" />
+</vector>
