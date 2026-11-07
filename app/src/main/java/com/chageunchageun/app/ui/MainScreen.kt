@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilterChip
@@ -83,6 +84,8 @@ class UiCallbacks(
     val onCompleteChecklist: () -> Unit = {},
     val onStartLampCheck: () -> Unit = {},
     val onAnswerLamp: (LampAnswer) -> Unit = {},
+    /** 데모 모드 켜기·끄기 (#005 H3) */
+    val onDemo: (Boolean) -> Unit = {},
 )
 
 @Composable
@@ -102,6 +105,7 @@ fun MainScreen(vm: MainViewModel) {
             onCompleteChecklist = vm::completeChecklist,
             onStartLampCheck = vm::startLampCheck,
             onAnswerLamp = vm::answerLamp,
+            onDemo = vm::setDemoMode,
         )
     }
     MainContent(s, cb)
@@ -149,9 +153,12 @@ fun MainContent(s: UiState, cb: UiCallbacks) {
         ) {
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                 Text("차근차근", style = HomeText.section)
+                // #005 H3: 데모 칩 — 주행 중에는 숨김, 연동 모드에서는 주차 중에만
+                if (!s.isDriving && (s.isDemo || s.isParked)) DemoToggle(s, cb)
                 if (s.isDemo && !s.isDriving && s.screen == Screen.HOME) ScenarioChips(s, cb, Modifier.weight(1f))
                 else Spacer(Modifier.weight(1f))
-                if (s.screen == Screen.HOME) IgnitionButtons(s, cb)
+                // 시동 버튼: 데모 모드, 또는 시동 신호를 받을 수 없는 환경(에뮬레이터)에서만 (DECISIONS #111)
+                if (s.screen == Screen.HOME && (s.isDemo || s.manualIgnition)) IgnitionButtons(s, cb)
             }
             Spacer(Modifier.height(8.dp))
             s.message?.let { MessageBanner(it, s, cb) }
@@ -186,6 +193,35 @@ private fun MessageBanner(text: String, s: UiState, cb: UiCallbacks) {
                 Text("닫기", style = HomeText.button)
             }
         }
+    }
+}
+
+/** "데모" 토글 칩. 켤 때만 확인 대화상자 1번 (#005 H3). */
+@Composable
+private fun DemoToggle(s: UiState, cb: UiCallbacks) {
+    var confirm by remember { mutableStateOf(false) }
+    FilterChip(
+        selected = s.isDemo,
+        onClick = { if (s.isDemo) cb.onDemo(false) else confirm = true },
+        label = { Text("데모", style = HomeText.chip) },
+        modifier = Modifier.padding(start = 12.dp).height(48.dp),
+    )
+    if (confirm) {
+        AlertDialog(
+            onDismissRequest = { confirm = false },
+            title = { Text("데모 모드", style = HomeText.title) },
+            text = { Text("데모 모드에서는 목업 데이터로 상황을 재현합니다. 실제 차량은 제어하지 않아요.", style = HomeText.body) },
+            confirmButton = {
+                Button(onClick = { confirm = false; cb.onDemo(true) }, modifier = Modifier.height(HOME_BUTTON)) {
+                    Text("켜기", style = HomeText.button)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirm = false }, modifier = Modifier.height(HOME_BUTTON)) {
+                    Text("취소", style = HomeText.button)
+                }
+            },
+        )
     }
 }
 

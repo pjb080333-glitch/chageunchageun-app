@@ -31,9 +31,11 @@ data class History(
  * 점검 이력 저장소. 운전 기록은 차량 안에만 저장한다.
  * TODO(가족 공유): 동의한 가족에게만 Sync SDK(SyncDocument)로 요약을 동기화.
  */
-class HistoryStore(context: Context) {
+class HistoryStore(val file: File) {
 
-    private val file = File(context.filesDir, "history.json")
+    /** 연동은 history.json, 데모는 history_demo.json (#005 H4: 섞지 않음). */
+    constructor(context: Context, fileName: String = HistoryFiles.LIVE) : this(File(context.filesDir, fileName))
+
     var data: History = load()
         private set
 

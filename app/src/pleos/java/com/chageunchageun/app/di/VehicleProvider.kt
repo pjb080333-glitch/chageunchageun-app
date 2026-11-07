@@ -2,23 +2,26 @@ package com.chageunchageun.app.di
 
 import android.content.Context
 import com.chageunchageun.app.data.CalendarScheduleSource
+import com.chageunchageun.app.data.DataSources
 import com.chageunchageun.app.data.DrivingStateSource
-import com.chageunchageun.app.data.NavigationSource
+import com.chageunchageun.app.data.HistoryFiles
+import com.chageunchageun.app.data.HistoryStore
 import com.chageunchageun.app.data.OpenMeteoWeather
 import com.chageunchageun.app.data.PleosTtsVoice
 import com.chageunchageun.app.data.PleosVoiceInput
-import com.chageunchageun.app.data.ScheduleSource
-import com.chageunchageun.app.data.VehicleDataSource
 import com.chageunchageun.app.data.Voice
 import com.chageunchageun.app.data.VoiceInput
-import com.chageunchageun.app.data.WeatherSource
 import com.chageunchageun.app.pleos.AaosCarState
 import com.chageunchageun.app.pleos.PleosNavigationSource
 import com.chageunchageun.app.pleos.PleosVehicleDataSource
 
-/** pleos 플레이버: Pleos SDK(Vehicle·NaviHelper·TTS·STT) + AAOS Car API + 기기 캘린더 + 공개 날씨(Open-Meteo). */
+/**
+ * pleos 플레이버 = 제출용 통합 앱 (#005): 연동 묶음(Pleos SDK + AAOS + 기기 캘린더 + Open-Meteo)과
+ * 데모 묶음(demoSources)을 둘 다 갖고, 실행 중에 고른다(MainViewModel). 연결에 실패하면 데모로 시작.
+ */
 object VehicleProvider {
-    const val isDemo = false
+    /** 연동 묶음이 있는 빌드인지(캘린더 권한 요청 여부). */
+    const val hasLive = true
 
     private var carState: AaosCarState? = null
 
@@ -26,10 +29,18 @@ object VehicleProvider {
     private fun car(context: Context): AaosCarState =
         carState ?: AaosCarState(context).also { carState = it }
 
-    fun vehicle(context: Context): VehicleDataSource = PleosVehicleDataSource(context, car(context))
-    fun navigation(context: Context): NavigationSource = PleosNavigationSource(context)
-    fun schedule(context: Context): ScheduleSource = CalendarScheduleSource(context)
-    fun weather(context: Context): WeatherSource = OpenMeteoWeather()
+    /** 연동 묶음. 만들기 자체가 실패하면(SDK 없는 기기 등) null → 데모로 시작. */
+    fun live(context: Context): DataSources? = runCatching {
+        DataSources(
+            vehicle = PleosVehicleDataSource(context, car(context)),
+            navigation = PleosNavigationSource(context),
+            schedule = CalendarScheduleSource(context),
+            weather = OpenMeteoWeather(),
+            history = HistoryStore(context, HistoryFiles.LIVE),
+            isDemo = false,
+        )
+    }.getOrNull()
+
     fun voice(context: Context, onStatus: (Boolean) -> Unit): Voice = PleosTtsVoice(context, onStatus)
     fun voiceInput(context: Context): VoiceInput = PleosVoiceInput(context)
     fun drivingState(context: Context): DrivingStateSource = car(context)

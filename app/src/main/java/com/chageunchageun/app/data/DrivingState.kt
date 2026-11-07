@@ -12,10 +12,16 @@ data class DrivingStatus(
     /** 기어 P 여부 (AAOS GEAR_SELECTION, 없으면 CURRENT_GEAR) */
     val gearPark: Boolean? = null,
 ) {
-    /** 주차 브레이크 또는 기어 P. 둘 다 모르면 null. */
+    /**
+     * 주차 브레이크 또는 기어 P. 하나라도 true 면 주차, **둘 다 false 로 확인됐을 때만** 주차 아님, 그 밖엔 null(모름).
+     * #005: 기어 값이 아직 안 온 상태에서 "브레이크 해제"만으로 주차 아님이라 판단해 데모 칩이 사라졌다(2단계 확인).
+     */
     val parked: Boolean?
-        get() = if (parkingBrakeOn == true || gearPark == true) true
-        else if (parkingBrakeOn == null && gearPark == null) null else false
+        get() = when {
+            parkingBrakeOn == true || gearPark == true -> true
+            parkingBrakeOn == false && gearPark == false -> false
+            else -> null
+        }
 }
 
 /**

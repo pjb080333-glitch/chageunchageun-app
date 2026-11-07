@@ -242,6 +242,8 @@ private fun SummaryBar(s: UiState) {
                 )
             }
             IgnitionChip(s.ignitionOn)
+            // #005 H3: 데모 모드면 항상 배지(실제 차량 값과 혼동 방지)
+            if (s.isDemo) DemoBadge(if (s.liveUnavailable) "차량 연결 안 됨 · 데모 모드" else "데모")
             Box(Modifier.weight(1f)) {
                 s.nextTripLine?.let {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -267,6 +269,18 @@ private fun SummaryBar(s: UiState) {
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun DemoBadge(text: String) {
+    Surface(color = MaterialTheme.colorScheme.tertiaryContainer, shape = MaterialTheme.shapes.medium) {
+        Text(
+            text,
+            style = HomeText.label.copy(fontWeight = FontWeight.Bold),
+            color = MaterialTheme.colorScheme.onTertiaryContainer,
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+        )
     }
 }
 

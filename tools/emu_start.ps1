@@ -22,12 +22,13 @@ if ($apk) {
 }
 # adb 가 처음 켜질 때 stderr 안내(daemon not running…)를 PS 5.1 이 오류로 보고 멈추지 않게 (#004 B++++)
 $ErrorActionPreference = 'Continue'
-& $adb start-server 2>&1 | Out-Null
+# adb 데몬이 파이프를 물려받아 끝나지 않는 문제(#005 2단계) → cmd 의 nul 로 보낸다
+cmd /c "$adb start-server >nul 2>&1"  # SDK 경로에 공백 없음
 if ((& $adb devices) -match 'emulator-\d+\s+device') { Write-Output 'ALREADY: 에뮬레이터가 이미 켜져 있어요(세션당 부팅 1회).'; exit 0 }
 
 Write-Output ("START {0:HH:mm:ss}" -f (Get-Date))
 Start-Process -FilePath "$sdk\emulator\emulator.exe" -ArgumentList '-avd', 'Pleos_API34', '-no-snapshot', '-cores', '2', '-no-boot-anim' -WindowStyle Normal
-& $adb wait-for-device 2>&1 | Out-Null
+cmd /c "$adb wait-for-device >nul 2>&1"
 do { Start-Sleep 3; $b = (& $adb shell getprop sys.boot_completed 2>&1 | Out-String) } until ($b -match '1')
 Write-Output ("BOOTED {0:HH:mm:ss} — 2분 대기" -f (Get-Date))
 Start-Sleep 120

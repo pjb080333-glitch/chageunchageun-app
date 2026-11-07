@@ -2,12 +2,12 @@
 
 | 항목 | 내용 |
 | --- | --- |
-| 앱 이름 | 차근차근 (데모 버전: 차근차근 데모) |
+| 앱 이름 | 차근차근 |
 | 한 줄 소개 | 누가 운전하든, 시동을 켜고 끄는 순간 그 자리에 앉은 사람에게 차가 먼저 일정과 차량 상태를 말하고 필요한 조치까지 실행하는 Pleos Connect 차량 관리 비서 |
-| 실행 방법 | 아래 [실행 방법](#실행-방법) — 데모 APK는 어느 에뮬레이터에서나, 연동 APK는 Pleos Connect Emulator에서 |
+| 실행 방법 | 아래 [실행 방법](#실행-방법) — APK 하나: Pleos Connect Emulator(실차)에서는 연동, 다른 기기에서는 데모 모드로 자동 시작 |
 | 테스트 환경 | Pleos Connect Emulator (API 34, 2560×1440), Android Studio, JDK 17 — [테스트 환경](#테스트-환경) |
 | 필요한 설정 | 캘린더 권한 허용, (선택) Virtual Console로 차량 상태 바꾸기 — [필요한 설정](#필요한-설정) |
-| APK 위치 | `apk/차근차근_release.apk`(연동), `apk/차근차근_demo_release.apk`(데모) — [GitHub Release 최신판](../../releases/latest)에서 내려받기 |
+| APK 위치 | `chageunchageun.apk` 1개 — [GitHub Release 최신판](../../releases/latest)에서 내려받기 (로컬 빌드 시 `apk/chageunchageun.apk`) |
 | 사용 SDK 연동 상태 | [표](#사용-sdk와-실제-연동-상태) · [실차에서 동작 / 데모에서만 시연](#실차연동-버전에서-동작--데모-모드에서만-시연) · [알려진 한계](#알려진-한계) |
 | 시연 영상 | https://youtu.be/JI1Ezh6ZFBk |
 
@@ -42,24 +42,29 @@
 | 장기 미운행 | 마지막 운행 기록(주행 중 화면 제한 신호) | ✔ |
 | 주변 주유소·정비소 경유 | 공개 지도 서버(장애 잦음) + 다시 찾기 | — |
 | 시동 켜기/끄기 자동 동작 | 에뮬레이터는 시동 신호 없음 → 앱 실행 = 시동 | 버튼으로 |
+| 데모 모드 | Pleos 연결 시 연동으로 시작, 주차 중 "데모" 칩으로 켬 | 6개 상황 재현. 요약 줄에 "데모" 배지, 실제 차량 제어 안 함, 이력 따로 저장 |
 
 ## APK
 
-| 파일 | 빌드 | 앱 이름 | 용도 |
+| 파일 | 빌드 | 패키지 | 용도 |
 | --- | --- | --- | --- |
-| `apk/차근차근_release.apk` | `pleosRelease` | 차근차근 | Pleos Connect(에뮬레이터·실차)용. Pleos SDK 실연동 |
-| `apk/차근차근_demo_release.apk` | `mockRelease` | 차근차근 데모 | 데모 시나리오 버전. 차량 SDK 없이 어느 에뮬레이터에서나 실행 |
+| `chageunchageun.apk` | `pleosRelease`(= `assembleRelease`) | `com.chageunchageun.app` | 하나의 APK — Pleos 연결 시 연동, 아니면 데모 모드 자동 시작, 데모 칩으로 전환 |
 
-- 두 앱은 패키지가 달라(`com.chageunchageun.app`, `com.chageunchageun.app.mock`) 함께 설치할 수 있습니다.
-- 버전 1.1.0 (versionCode 2). APK 파일은 저장소에 커밋하지 않고 [GitHub Release 최신판](../../releases/latest)에 첨부합니다(로컬 빌드 시 `apk/` 폴더). Release 첨부 파일 이름은 영문: `chageunchageun_release.apk`(연동), `chageunchageun_demo_release.apk`(데모).
+- 버전 1.2.0 (versionCode 3). 1.1.0 연동 APK와 같은 서명이라 그 위에 덮어 설치됩니다. 이전에 따로 설치한 "차근차근 데모"(`com.chageunchageun.app.mock`)는 지워도 됩니다.
+- APK 파일은 저장소에 커밋하지 않고 [GitHub Release 최신판](../../releases/latest)에 첨부합니다. 이전 판(연동·데모 APK 2개)은 [v1.1.0](../../releases/tag/v1.1.0), [v1.0.0](../../releases/tag/v1.0.0).
+
+### 데모 모드 켜는 법
+1. 주차 상태(기어 P 또는 주차 브레이크)에서 앱 이름 "차근차근" 옆 **데모** 칩을 누르고 확인합니다.
+2. 위쪽 상황 칩(평상시·겨울 아침·경고등·주행가능거리 부족·장기 미운행·하차 실수)을 고르고 **시동 켜기 / 시동 끄기**를 누릅니다.
+3. **데모** 칩을 다시 누르면 실제 차량 데이터로 돌아옵니다. (차량에 연결되지 않은 기기에서는 처음부터 데모 모드로 열리고 "차량 연결 안 됨 · 데모 모드"가 표시됩니다.)
 
 ## 실행 방법
 
-### 1. 데모 버전 (`mockDebug` / `mockRelease`)
-1. Android Studio에서 프로젝트를 엽니다.
-2. Build Variants에서 `mockDebug`를 선택합니다. (또는 `adb install apk/차근차근_demo_release.apk`)
-3. Pleos Connect Emulator 또는 가로 태블릿 에뮬레이터(API 28 이상)에서 **차근차근 데모**를 실행합니다.
-4. 홈 화면 상단에서 데모 시나리오를 고른 뒤 **시동 켜기 / 시동 끄기** 버튼을 누릅니다.
+### 1. 데모 모드
+1. `adb install -r chageunchageun.apk` (또는 Android Studio Build Variants에서 `pleosDebug` 실행).
+2. Pleos Connect Emulator에서는 [데모 모드 켜는 법](#데모-모드-켜는-법)대로 데모 칩을 켭니다. 가로 태블릿 에뮬레이터(API 28 이상)처럼 차량에 연결되지 않은 기기에서는 처음부터 데모 모드로 열립니다.
+3. 홈 화면 상단에서 상황을 고른 뒤 **시동 켜기 / 시동 끄기** 버튼을 누릅니다.
+4. 개발용 `mockDebug` 변형(데모 데이터만, 패키지 `com.chageunchageun.app.mock`)도 남아 있습니다.
 
 | 시나리오 | 확인할 수 있는 기능 |
 | --- | --- |
@@ -70,22 +75,23 @@
 | 장기 미운행 | 장기 미운행 후 첫 운행 안내 |
 | 하차 실수 | 시동 끌 때 하차 점검 |
 
-Pleos Connect Emulator에서는 데모 버전도 Pleos 음성(TextToSpeech)으로 말합니다. 음성 서비스가 없는 일반 에뮬레이터에서는 안드로이드 기본 TTS로 바뀝니다.
+Pleos Connect Emulator에서는 데모 모드도 Pleos 음성(TextToSpeech)으로 말합니다. 음성 서비스가 없는 일반 에뮬레이터에서는 안드로이드 기본 TTS로 바뀝니다.
 
 **시연 자동화 (debug 빌드 전용, release 에서는 무시)**
 
 ```
-adb shell am start --user 10 -n com.chageunchageun.app.mock/com.chageunchageun.app.MainActivity --es demo_scenario WINTER_MORNING --es demo_action IGNITION_ON --es demo_tab HOME
+adb shell am start --user 10 -n com.chageunchageun.app/com.chageunchageun.app.MainActivity --es demo_scenario WINTER_MORNING --es demo_action IGNITION_ON --es demo_tab HOME
 ```
 - `demo_scenario`: NORMAL, WINTER_MORNING, WARNING_LIGHTS, LOW_RANGE, LONG_IDLE, EXIT_MISTAKES
 - `demo_action`: IGNITION_ON, IGNITION_OFF, WINTER_PRESET, START_LAMP_CHECK, DISMISS_MESSAGE,
-  SEED_CALENDAR(테스트 일정 넣기, 연동 버전용), SEED_CALENDAR_NOGEO, WAYPOINT_FUEL, WAYPOINT_REPAIR
+  SEED_CALENDAR(테스트 일정 넣기, 연동 모드용), SEED_CALENDAR_NOGEO, WAYPOINT_FUEL, WAYPOINT_REPAIR,
+  DEMO_ON·DEMO_OFF(데모 모드 켜기·끄기). `demo_scenario`를 주면 먼저 데모 모드로 바뀝니다
 - `demo_tab`: HOME, CHECKLIST, LAMP, HISTORY
 
-### 2. Pleos 연동 버전 (`pleosDebug` / `pleosRelease`)
+### 2. Pleos 연동 (`pleosDebug` / `pleosRelease`)
 1. Pleos Playground 개발 문서에 따라 Android Studio에 **Pleos Connect Emulator**(v2.1.0 이상)를 설치합니다.
 2. AVD 부팅 옵션을 **Cold boot**로 설정합니다.
-3. Build Variants에서 `pleosDebug`를 선택해 실행합니다. (또는 `adb install apk/차근차근_release.apk`)
+3. Build Variants에서 `pleosDebug`를 선택해 실행합니다. (또는 `adb install -r chageunchageun.apk` — 에뮬레이터에서 앱은 사용자 10으로 실행되므로 필요하면 `--user 10`)
 4. 캘린더 권한을 허용합니다.
 5. 앱을 열면(또는 시동이 켜지면) 출발 브리핑을 한 번 하고, 시동 끄기 버튼(또는 시동 OFF)으로 하차 점검을 합니다.
 
@@ -97,9 +103,9 @@ adb shell am start --user 10 -n com.chageunchageun.app.mock/com.chageunchageun.a
 | 캘린더 읽기 (실행 시 허용) | 다음 일정으로 출발 브리핑 |
 | `pleos.car.permission.*` (설치 시 자동) | 차량 상태 읽기·열선/공조/등화 제어, 내비, 음성 |
 | `android.car.permission.CAR_POWERTRAIN` | 시동·주차 브레이크·기어 상태 |
-| 인터넷 (연동 버전만) | 날씨 예보(Open-Meteo), 주유소·정비소 검색(OpenStreetMap). 키 없는 공개 API, 좌표만 보냄 |
+| 인터넷 (연동 모드) | 날씨 예보(Open-Meteo), 주유소·정비소 검색(OpenStreetMap). 키 없는 공개 API, 좌표만 보냄 |
 
-### 테스트 일정 넣기 (연동 버전 debug)
+### 테스트 일정 넣기 (연동 모드, debug 빌드)
 ```
 adb shell pm grant --user 10 com.chageunchageun.app android.permission.WRITE_CALENDAR
 adb shell am start --user 10 -n com.chageunchageun.app/com.chageunchageun.app.MainActivity --es demo_action SEED_CALENDAR
@@ -155,14 +161,14 @@ curl -X PUT "http://127.0.0.1:8088/vehicle/gear?gear=Park"        # 기어 P
 | 기기 캘린더 | — | 다음 일정 | 연동 |
 | Open-Meteo | — | 현재 기온·오늘 밤 최저기온 | 대체(차량 외기온 공개 API 없음) |
 | OpenStreetMap (Nominatim·Overpass) | — | 장소 이름 → 좌표, 주변 주유소·정비소·충전소 | 대체(NaviHelper 장소 검색 없음, Geocoder 미동작 대비) |
-| Tire.getTirePressure, Safety.getTelltalesInfo | — | 공기압·경고등 | **사용 안 함** — 공식 샘플이 공개 API에서 제외. 데모 버전에서만 시연 |
+| Tire.getTirePressure, Safety.getTelltalesInfo | — | 공기압·경고등 | **사용 안 함** — 공식 샘플이 공개 API에서 제외. 데모 모드에서만 시연 |
 
 ## 구조
 
 ```
 app/src/main    점검 엔진(engine), 데이터 계층(data), 화면(ui), 음성(Pleos TTS/STT 공통)
-app/src/mock    데모 시나리오용 데이터 공급
-app/src/pleos   Pleos Vehicle·NaviHelper·AAOS 연동 구현
+app/src/mock    개발·테스트용 데모 전용 변형(mockDebug)
+app/src/pleos   제출 앱: Pleos Vehicle·NaviHelper·AAOS 연동 + 데모 묶음, 실행 중 전환(DataSources)
 app/src/debug   테스트 일정 넣기용 캘린더 쓰기 권한(debug 전용)
 app/src/test    점검 엔진 단위 테스트
 docs/           구조 설명(발표 질의응답용), 음성 확인 방법

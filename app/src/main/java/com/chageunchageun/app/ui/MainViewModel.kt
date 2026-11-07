@@ -19,6 +19,16 @@ import com.chageunchageun.app.data.VoiceMonitor
 import com.chageunchageun.app.data.WaypointResult
 import com.chageunchageun.app.data.YesNo
 import com.chageunchageun.app.di.VehicleProvider
+import com.chageunchageun.app.di.demoSources
+import com.chageunchageun.app.data.AppMode
+import com.chageunchageun.app.data.DataSources
+import com.chageunchageun.app.data.ModeSelector
+import com.chageunchageun.app.data.NavigationSource
+import com.chageunchageun.app.data.ScheduleSource
+import com.chageunchageun.app.data.SourceSwitch
+import com.chageunchageun.app.data.VehicleDataSource
+import com.chageunchageun.app.data.WeatherSource
+import com.chageunchageun.app.data.WinterPreset
 import com.chageunchageun.app.engine.BriefingComposer
 import com.chageunchageun.app.engine.CarProfile
 import com.chageunchageun.app.engine.ChecklistItem
@@ -115,22 +125,35 @@ data class UiState(
     val exitDone: Boolean = false,
     /** 시연 녹화용(--ez demo_clean true): debug 상태 칩을 숨긴다. */
     val demoClean: Boolean = false,
+    /** 차량 연결 실패로 데모 모드로만 쓸 수 있음 (#005 H2: "차량 연결 안 됨 · 데모 모드"). */
+    val liveUnavailable: Boolean = false,
+    /** 시동 신호를 받을 수 없는 환경(에뮬레이터 등) → 연동 모드에서도 시동 켜기/끄기 버튼을 보인다 (#005, DECISIONS #111). */
+    val manualIgnition: Boolean = true,
 )
 
 class MainViewModel(app: Application) : AndroidViewModel(app) {
 
-    private val vehicle = VehicleProvider.vehicle(app)
-    private val navigation = VehicleProvider.navigation(app)
-    private val schedule = VehicleProvider.schedule(app)
-    private val weather = VehicleProvider.weather(app)
-    private val history = HistoryStore(app)
+    /** 연동(Pleos)·데모(목업) 데이터 묶음. 실행 중에 바꾼다 (#005 H1). 아래 값들은 지금 묶음을 가리킨다. */
+    private val sources = SourceSwitch(VehicleProvider.live(app)) { demoSources(app) }
+    private val src: DataSources get() = sources.current
+    private val vehicle: VehicleDataSource get() = src.vehicle
+    private val navigation: NavigationSource get() = src.navigation
+    private val schedule: ScheduleSource get() = src.schedule
+    private val weather: WeatherSource get() = src.weather
+    private val history: HistoryStore get() = src.history
+
+    /** 연동 차량 연결·기능 확인 결과 (시작할 때 한 번). 실패면 데모에서 나갈 수 없다. */
+    private var liveOk = false
+    private var liveSupported: Set<Feature> = emptySet()
+    private var watchingIgnition = false
+    private val modeLock = Mutex()
     private val voiceInput = VehicleProvider.voiceInput(app)
     private val drivingState = VehicleProvider.drivingState(app)
     private val profile = CarProfile.sample()
 
     private val _state = MutableStateFlow(
         UiState(
-            isDemo = VehicleProvider.isDemo,
+            isDemo = false,
             profileName = profile.name,
             maintenanceItems = profile.maintenanceItems,
         ),
@@ -164,22 +187,80 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     init {
         viewModelScope.launch { VoiceMonitor.state.collect { v -> _state.update { it.copy(voiceActivity = v) } } }
         viewModelScope.launch {
-            vehicle.connect()
-            supported = vehicle.supported()
-            if (visible) onVisible(true)
-            val mock = vehicle as? MockVehicleDataSource
-            if (mock != null) {
-                selectScenario(mock.scenario)
-            } else {
-                refreshPassive()
-                navigation.watchRoute(::onRouteStarted)
-                val watching = drivingState.start { status ->
-                    viewModelScope.launch { onDrivingStatus(status) }
+            // #005 H2: 차량 연결에 성공하면 연동, 실패하면 데모로 시작(마지막 모드는 기억하지 않음).
+            val mode = chooseStartMode()
+            modeLock.withLock { enterMode(demo = mode == AppMode.DEMO) }
+            if (liveOk) sources.live?.navigation?.watchRoute(::onRouteStarted)
+            watchingIgnition = drivingState.start { status ->
+                viewModelScope.launch { onDrivingStatus(status) }
+            }
+            _state.update { it.copy(manualIgnition = !watchingIgnition) }
+            // 시동 상태를 받을 수 없는 환경: 앱을 연 순간을 시동으로 보고 출발 브리핑을 한 번 한다(연동 모드).
+            if (!watchingIgnition && !src.isDemo) ignitionOn()
+        }
+    }
+
+    // ---------------- 연동 ↔ 데모 (#005) ----------------
+
+    private suspend fun chooseStartMode(): AppMode {
+        val live = sources.live ?: return AppMode.DEMO
+        val ok = runCatching { withTimeoutOrNull(10_000) { live.vehicle.connect() } == true }.getOrDefault(false)
+        val sup = if (ok) runCatching { withTimeoutOrNull(15_000) { live.vehicle.supported() } }.getOrNull().orEmpty() else emptySet()
+        liveOk = ModeSelector.startMode(ok, sup) == AppMode.LIVE
+        liveSupported = sup
+        return if (liveOk) AppMode.LIVE else AppMode.DEMO
+    }
+
+    /** 데모 칩 (#005 H3). 연동 연결이 없으면 데모를 끌 수 없다고 알린다. */
+    fun setDemoMode(on: Boolean) {
+        viewModelScope.launch {
+            modeLock.withLock {
+                if (on == src.isDemo) return@withLock
+                if (!on && !liveOk) {
+                    _state.update { it.copy(message = "차량에 연결되지 않아 데모 모드로만 쓸 수 있어요.") }
+                    return@withLock
                 }
-                // 시동 상태를 받을 수 없는 환경: 앱을 연 순간을 시동으로 보고 출발 브리핑을 한 번 한다.
-                if (!watching) ignitionOn()
+                enterMode(demo = on, byUser = true)
+                // 데모를 끄면 연동 데이터로 바로 다시 조회한다(시동이 꺼진 게 확실할 때만 브리핑 생략).
+                if (!on && (!watchingIgnition || lastIgnition != false)) doIgnitionOn()
             }
         }
+    }
+
+    /** 데이터 묶음을 바꾸고 화면 상태를 새로 시작한다. 데모는 이전 데모 APK 처럼 시나리오 선택 상태로. */
+    private suspend fun enterMode(demo: Boolean, byUser: Boolean = false) {
+        vehicle.unwatchCabin()
+        voiceInput.stop()
+        routeRecheck.reset()
+        lampSession = null
+        exitShown = false
+        lastTrip = null
+        lastTripPlace = null
+        sources.use(demo)
+        supported = if (demo) {
+            vehicle.connect()
+            vehicle.supported()
+        } else {
+            liveSupported
+        }
+        _state.update {
+            UiState(
+                isDemo = demo,
+                liveUnavailable = !liveOk,
+                manualIgnition = it.manualIgnition,
+                profileName = profile.name,
+                maintenanceItems = profile.maintenanceItems,
+                voiceAvailable = it.voiceAvailable,
+                isDriving = it.isDriving,
+                voiceActivity = it.voiceActivity,
+                demoClean = it.demoClean,
+                // 앱 시작 때 연동으로 들어갈 때는 안내하지 않는다(데모 칩으로 끌 때만, #005 2단계).
+                message = if (byUser && !demo) "데모 모드를 껐어요. 차량 데이터로 다시 확인할게요." else null,
+            )
+        }
+        if (visible) onVisible(true)
+        val mock = vehicle as? MockVehicleDataSource
+        if (demo && mock != null) selectScenarioNow(mock.scenario) else refreshPassive()
     }
 
     // ---------------- 시동·주행 상태 (pleos 플레이버) ----------------
@@ -188,10 +269,15 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         status.drivingRestricted?.let { driving ->
             _state.update { it.copy(isDriving = driving, screen = if (driving) Screen.HOME else it.screen) }
             // #004 E1: 주행 시작·끝을 마지막 운행으로 기록 → 시동 신호가 없어도 장기 미운행 안내가 동작.
-            if (driveTracker.onDriving(driving)) {
+            if (!src.isDemo && driveTracker.onDriving(driving)) {
                 history.data.lastDriveEndMillis = System.currentTimeMillis()
                 history.save()
             }
+        }
+        // 데모 모드: 주행 제한(안전)만 따르고, 시동·주차는 시나리오 값을 쓴다(#005). 시동 값은 기억만 한다.
+        if (src.isDemo) {
+            status.ignitionOn?.let { lastIgnition = it }
+            return
         }
         // 주차 = 주차 브레이크 채움 또는 기어 P (#003 A1)
         status.parked?.let { parked -> _state.update { it.copy(isParked = parked) } }
@@ -210,8 +296,12 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun runDemo(scenario: String?, action: String?, tab: String?, clean: Boolean = false) {
         if (clean) _state.update { it.copy(demoClean = true) }
         viewModelScope.launch {
+            // #005: 시나리오를 고르면 데모 모드로(필요하면 먼저 전환). DEMO_OFF 로 연동 모드로.
+            if (scenario != null && !src.isDemo) modeLock.withLock { enterMode(demo = true) }
             scenario?.let { name -> DemoScenario.entries.firstOrNull { it.name == name }?.let { selectScenarioNow(it) } }
             when (action) {
+                "DEMO_ON" -> if (!src.isDemo) modeLock.withLock { enterMode(demo = true) }
+                "DEMO_OFF" -> setDemoMode(false)
                 "IGNITION_ON" -> doIgnitionOn()
                 "IGNITION_OFF" -> doIgnitionOff()
                 "WINTER_PRESET" -> say(winterPreset())
@@ -335,6 +425,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     /** 시동 후 운전자가 내비에서 목적지를 정해 길안내가 시작되면 주행가능거리를 다시 비교한다. 부족할 때만 말한다. */
     private fun onRouteStarted(route: ActiveRoute) {
+        if (src.isDemo) return // 연동 내비 신호는 데모 화면에 섞지 않는다
         viewModelScope.launch { briefingLock.withLock { compareRoute(route) } }
     }
 
@@ -385,13 +476,13 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     /** 차량에 바깥 기온 값이 없으면(Pleos 공개 API 에 없음) 날씨 예보의 현재 기온을 넣는다. */
     private suspend fun withOutsideTemp(snap: VehicleSnapshot): VehicleSnapshot {
-        if (snap.outsideTempC != null || VehicleProvider.isDemo) return snap
+        if (snap.outsideTempC != null || src.isDemo) return snap
         val now = weather.weather(weatherPoint())?.currentC ?: return snap
         return snap.copy(outsideTempC = now)
     }
 
     private suspend fun tonightMinTemp(): Float? =
-        if (VehicleProvider.isDemo) _state.value.scenario?.tonightMinTempC else weather.weather(weatherPoint())?.tonightMinC
+        if (src.isDemo) _state.value.scenario?.tonightMinTempC else weather.weather(weatherPoint())?.tonightMinC
 
     // ---------------- 시동 끄기: 하차 점검 ----------------
 
@@ -509,18 +600,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     private fun km(d: Double): String = if (d < 10) "%.1fkm".format(d) else "${d.roundToInt()}km"
 
-    private suspend fun winterPreset(): String {
-        val done = mutableListOf<String>()
-        if (Feature.SEAT_HEAT in supported && vehicle.setSeatHeat(level = 2)) done += "시트 열선"
-        if (Feature.WHEEL_HEAT in supported && vehicle.setSteeringWheelHeat(true)) done += "핸들 열선"
-        if (Feature.MIRROR_HEAT in supported && vehicle.setSideMirrorHeat(true)) done += "사이드미러 열선"
-        if (Feature.HVAC in supported && vehicle.setCabinTemperature(23f)) done += "실내 온도 23도"
-        return if (done.isEmpty()) {
-            "이 차에서는 앱으로 열선을 켤 수 없어요. 직접 켜 주세요."
-        } else {
-            "${done.joinToString(", ").eulReul()} 켰어요."
-        }
-    }
+    /** 겨울 출발 준비. 데모 모드면 목업 차량에만 보내고 "실제 차량은 제어하지 않았어요"를 붙인다(#005 H4). */
+    private suspend fun winterPreset(): String = WinterPreset.run(src, supported)
 
     // ---------------- 등화 점검 ----------------
 
@@ -739,12 +820,11 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     override fun onCleared() {
-        vehicle.unwatchCabin()
-        navigation.release()
+        if (src.isDemo) src.release()
+        sources.live?.release()
         voiceInput.release()
         drivingState.release()
         voice.release()
-        vehicle.release()
     }
 
     private companion object {

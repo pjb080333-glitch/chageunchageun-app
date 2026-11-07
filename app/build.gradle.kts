@@ -20,8 +20,8 @@ android {
         applicationId = "com.chageunchageun.app"
         minSdk = 28
         targetSdk = 35
-        versionCode = 2
-        versionName = "1.1.0"
+        versionCode = 3
+        versionName = "1.2.0"
     }
 
     signingConfigs {
@@ -40,8 +40,9 @@ android {
         }
     }
 
-    // mock  : 차량 데이터를 시나리오 목업으로 대체. 일반 안드로이드 에뮬레이터에서도 실행·데모 영상 촬영 가능.
-    // pleos : Pleos Vehicle SDK 실연동. Pleos Connect 에뮬레이터/실차에서 실행.
+    // #005: 제출용은 pleos release 하나(통합 앱: 연동 + 실행 중 데모 모드).
+    // mock  : 개발·단위 테스트용(항상 데모 모드). release 는 만들지 않는다(아래 androidComponents).
+    // pleos : 통합 앱. Pleos 연결 성공 → 연동, 실패 → 데모 모드로 시작, "데모" 칩으로 전환.
     flavorDimensions += "vehicle"
     productFlavors {
         create("mock") {
@@ -68,6 +69,11 @@ android {
 
     // AAOS Car API(시동·주차 브레이크·주행 제한). pleos 플레이버 코드에서만 쓴다. 기기에서는 시스템 라이브러리로 제공.
     useLibrary("android.car")
+}
+
+// #005 H1: 제출용 release 는 통합 변형(pleosRelease) 하나만.
+androidComponents {
+    beforeVariants(selector().withBuildType("release").withFlavor("vehicle" to "mock")) { it.enable = false }
 }
 
 dependencies {
