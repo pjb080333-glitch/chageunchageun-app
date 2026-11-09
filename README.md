@@ -51,7 +51,7 @@
 | `chageunchageun.apk` | `pleosRelease`(= `assembleRelease`) | `com.chageunchageun.app` | 하나의 APK — Pleos 연결 시 연동, 아니면 데모 모드 자동 시작, 데모 칩으로 전환 |
 
 - 버전 1.2.0 (versionCode 3). 1.1.0 연동 APK와 같은 서명이라 그 위에 덮어 설치됩니다. 이전에 따로 설치한 "차근차근 데모"(`com.chageunchageun.app.mock`)는 지워도 됩니다.
-- APK 파일은 저장소에 커밋하지 않고 [GitHub Release 최신판](../../releases/latest)에 첨부합니다. 이전 판(연동·데모 APK 2개)은 [v1.1.0](../../releases/tag/v1.1.0), [v1.0.0](../../releases/tag/v1.0.0).
+- APK 파일은 저장소에 커밋하지 않고 [GitHub Release 최신판](../../releases/latest)에 첨부합니다. 이전 판(연동·데모 APK 2개)은 [v1.1.0](../../releases/tag/v1.1.0).
 
 ### 데모 모드 켜는 법
 1. 주차 상태(기어 P 또는 주차 브레이크)에서 앱 이름 "차근차근" 옆 **데모** 칩을 누르고 확인합니다.
